@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="web_flow.Field">
+        <div class="o_web_flow">
+            <div class="o_web_flow_toolbar btn-group btn-group-sm">
+                <button type="button" class="btn btn-secondary" title="Zoom out" t-on-click="() => this.zoom(-0.1)"><i class="oi" data-icon="remove"/></button>
+                <button type="button" class="btn btn-secondary" title="Actual size" t-on-click="() => this.zoom(0)"><t t-out="Math.round(this.state.scale * 100)"/>%</button>
+                <button type="button" class="btn btn-secondary" title="Zoom in" t-on-click="() => this.zoom(0.1)"><i class="oi" data-icon="add"/></button>
+            </div>
+            <div class="o_web_flow_canvas" t-ref="this.canvasRef" t-on-pointerdown="this.onPointerDown">
+                <div class="o_web_flow_tree" t-attf-style="zoom: {{ this.state.scale }}">
+                    <div class="o_web_flow_node">
+                        <div class="o_web_flow_card o_web_flow_start">
+                            <span class="o_web_flow_icon"><i class="oi" data-icon="play_arrow"/></span>
+                            <div class="o_web_flow_card_body">
+                                <div class="o_web_flow_card_name" t-out="this.state.data?.start"/>
+                            </div>
+                        </div>
+                        <div class="o_web_flow_branches o_web_flow_single">
+                            <div class="o_web_flow_branch">
+                                <t t-set="root" t-value="this.root"/>
+                                <t t-if="root">
+                                    <WebFlowAddButton t-if="!this.isReadonly" types="this.tree.types" insert="true"
+                                                      onPick="(type) => this.addStep({ type, before: root })"/>
+                                    <WebFlowNode node="root" tree="this.tree" readonly="this.isReadonly"/>
+                                </t>
+                                <t t-elif="!this.isReadonly">
+                                    <WebFlowAddButton types="this.tree.types" onPick="(type) => this.addStep({ type })"/>
+                                    <div t-if="!this.props.record.resId" class="o_web_flow_hint text-muted small">Save the record, then add the first step.</div>
+                                    <div t-else="" class="o_web_flow_hint text-muted small">Add the first step.</div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="web_flow.Node">
+        <t t-set="node" t-value="this.props.node"/>
+        <div class="o_web_flow_node">
+            <div class="o_web_flow_card" role="button"
+                 t-att-class="'o_web_flow_type_' + node.type + (node.warning ? ' o_web_flow_warning' : '') + (node.status ? ' o_web_flow_status_' + node.status : '')"
+                 t-att-data-node-id="node.id" t-on-click="() => this.tree.onOpen(node)">
+                <span class="o_web_flow_icon"><i class="oi" t-att-data-icon="node.icon"/></span>
+                <div class="o_web_flow_card_body">
+                    <div class="o_web_flow_card_type" t-out="node.type_label"/>
+                    <div class="o_web_flow_card_name" t-out="node.name"/>
+                    <div t-if="node.summary" class="o_web_flow_card_summary" t-out="node.summary"/>
+                    <div t-if="node.warning" class="o_web_flow_card_warning"><i class="oi" data-icon="warning"/> <t t-out="node.warning"/></div>
+                </div>
+                <div t-if="!this.props.readonly" class="o_web_flow_card_menu">
+                    <button type="button" class="btn btn-link btn-sm p-0" title="Actions" t-on-click="this.toggleMenu"><i class="oi" data-icon="more_vert"/></button>
+                    <div t-if="this.state.menu" class="o_web_flow_menu dropdown-menu show">
+                        <button type="button" class="dropdown-item" t-on-click="(ev) => this.menuAction(ev, () => this.tree.onOpen(node))">Edit</button>
+                        <t t-foreach="this.optionalBranches" t-as="branch" t-key="branch.key">
+                            <t t-foreach="this.tree.types" t-as="type" t-key="type.type">
+                                <button type="button" class="dropdown-item"
+                                        t-on-click="(ev) => this.menuAction(ev, () => this.tree.onAdd({ type, parent: node, branch }))">
+                                    <t t-out="branch.label"/>: <t t-out="type.label"/>
+                                </button>
+                            </t>
+                        </t>
+                        <div class="dropdown-divider"/>
+                        <button type="button" class="dropdown-item text-danger" t-on-click="(ev) => this.menuAction(ev, () => this.tree.onDelete(node))">Delete</button>
+                    </div>
+                </div>
+            </div>
+            <t t-set="branches" t-value="this.branches"/>
+            <div t-if="branches.length" class="o_web_flow_branches" t-att-class="{ 'o_web_flow_single': branches.length === 1 }">
+                <div t-foreach="branches" t-as="branch" t-key="branch.key" class="o_web_flow_branch"
+                     t-att-class="'o_web_flow_branch_' + branch.branch">
+                    <span t-if="branches.length > 1 or branch.optional" class="o_web_flow_branch_label" t-out="branch.label"/>
+                    <t t-set="child" t-value="this.child(branch)"/>
+                    <t t-if="child">
+                        <WebFlowAddButton t-if="!this.props.readonly" types="this.tree.types" insert="true"
+                                          onPick="(type) => this.tree.onAdd({ type, before: child })"/>
+                        <WebFlowNode node="child" tree="this.tree" readonly="this.props.readonly"/>
+                    </t>
+                    <WebFlowAddButton t-elif="!this.props.readonly" types="this.tree.types"
+                                      onPick="(type) => this.tree.onAdd({ type, parent: node, branch })"/>
+                    <div t-else="" class="o_web_flow_end_dot"/>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="web_flow.AddButton">
+        <div class="o_web_flow_add" t-att-class="{ 'o_web_flow_add_insert': this.props.insert }">
+            <button type="button" class="o_web_flow_add_btn btn" t-att-title="this.props.insert ? 'Insert a step here' : 'Add a step'"
+                    t-on-click="this.toggle"><i class="oi" data-icon="add"/></button>
+            <div t-if="this.state.open" class="o_web_flow_picker dropdown-menu show">
+                <button t-foreach="this.props.types" t-as="type" t-key="type.type" type="button"
+                        class="dropdown-item d-flex gap-2 align-items-start" t-on-click="() => this.pick(type)">
+                    <i class="oi o_web_flow_picker_icon" t-att-data-icon="type.icon"/>
+                    <span>
+                        <span class="d-block fw-bold" t-out="type.label"/>
+                        <span class="d-block small text-muted text-wrap" t-out="type.help"/>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </t>
+</templates>
