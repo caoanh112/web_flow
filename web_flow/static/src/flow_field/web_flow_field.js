@@ -180,6 +180,16 @@ export class WebFlowField extends Component {
     }
 
     openStep(node) {
+        // a run monitor may open another record for a step (e.g. what was done at this step)
+        if (node.open_model) {
+            this.dialog.add(FormViewDialog, {
+                resModel: node.open_model,
+                resId: node.open_id,
+                title: node.name,
+                readonly: true,
+            });
+            return;
+        }
         this.dialog.add(FormViewDialog, {
             resModel: this.nodeModel,
             resId: node.id,
