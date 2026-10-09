@@ -1,0 +1,99 @@
+<section class="oe_container">
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <h2>Web Flow: a Canvas Widget for Flows of Steps</h2>
+                <p class="lead">
+                    <strong>Web Flow</strong> draws a tree of steps with branches on a canvas, like the campaigns of a
+                    marketing automation, for <strong>any model</strong> of your modules, on Odoo Community and
+                    Enterprise. Users add a step where it goes with the <strong>+</strong> buttons, edit it in place,
+                    move it, zoom and pan.
+                </p>
+                <div class="row mt-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="alert alert-success h-100 mb-0">
+                            <strong>Two mixins</strong><br/>
+                            <code>web.flow.mixin</code> for the flow, <code>web.flow.node.mixin</code> for its steps,
+                            with the tree rules built in.
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="alert alert-success h-100 mb-0">
+                            <strong>One widget</strong><br/>
+                            <code>widget="web_flow"</code> on the one2many of the steps: cards, curved connectors,
+                            branch labels, END of the branches.
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="alert alert-success h-100 mb-0">
+                            <strong>Run monitors</strong><br/>
+                            A status per step (done, running, waiting, failed) to follow the runs of a flow on the
+                            same canvas.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <h3>Screenshot</h3>
+                <p>The canvas as used by AI Workflow: steps of different types, Yes / No branches, + buttons.</p>
+                <img src="screenshots/flow_canvas.png" alt="Web Flow canvas widget with steps, branches and plus buttons" class="img-fluid border rounded shadow-sm"/>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="oe_container">
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <h3>Use it in your module</h3>
+                <ol>
+                    <li>The flow inherits <code>web.flow.mixin</code>; its steps inherit <code>web.flow.node.mixin</code>,
+                        with a many2one to the flow (<code>_flow_container_field</code>, <code>flow_id</code> by default),
+                        a <code>parent_id</code> to the previous step and a type field (<code>_flow_type_field</code>,
+                        <code>node_type</code> by default).</li>
+                    <li>The steps define <code>_flow_node_types()</code> (the types offered by the + buttons, with icon,
+                        help and category), <code>_flow_branch_list()</code> (the branches under a step) and optionally
+                        <code>_flow_card_data()</code> (summary and warning of the card).</li>
+                    <li>In the form of the flow, put <code>widget="web_flow"</code> on the one2many of the steps.</li>
+                </ol>
+<pre class="bg-light border rounded p-3 small"><code>class MyFlowStep(models.Model):
+    _name = 'my.flow.step'
+    _inherit = ['web.flow.node.mixin']
+
+    flow_id = fields.Many2one('my.flow', required=True, ondelete='cascade')
+    parent_id = fields.Many2one('my.flow.step', ondelete='cascade')
+    node_type = fields.Selection([('task', 'Task'), ('check', 'Check')], required=True)
+
+    @api.model
+    def _flow_node_types(self):
+        return [{'type': 'task', 'label': 'Task', 'icon': 'checklist', 'help': 'Do something',
+                 'category': 'Work', 'shape': 'card'},
+                {'type': 'check', 'label': 'Check', 'icon': 'fork_right', 'help': 'Yes or No',
+                 'category': 'Rules', 'shape': 'card'}]
+
+    def _flow_branch_list(self):
+        return [('yes', False), ('no', False)] if self.node_type == 'check' else [('next', False)]</code></pre>
+                <h3>Features</h3>
+                <ul>
+                    <li>Insert a step above another, delete a step and its branch, re-layout.</li>
+                    <li>Drag the cards anywhere: their position is kept.</li>
+                    <li>Pan, zoom (Ctrl + wheel), fit to view, full screen; option <code>fill</code> to use the height left
+                        in the page.</li>
+                    <li>Loops are not drawn: a step type of your model can lead to another step (e.g. "Go to step").</li>
+                </ul>
+                <h3>Technical details</h3>
+                <ul>
+                    <li>Odoo 20, Community and Enterprise. Depends on <code>web</code> only. LGPL-3, free.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
