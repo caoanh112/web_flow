@@ -23,6 +23,10 @@ class WebFlowNodeMixin(models.AbstractModel):
 
     flow_branch = fields.Char("Branch", help="Branch of the previous step that leads to this step.")
     flow_branch_label = fields.Char("Branch choice", help="Label of the branch, for the branches made of choices.")
+    flow_position = fields.Json("Position on the canvas", copy=False,
+                                help="{x, y} of the card when it was moved by hand; empty: placed by the layout.")
+    flow_end_positions = fields.Json("Positions of the END of the branches", copy=False,
+                                     help="{branch key: {x, y}} of the END of the branches without step, moved by hand.")
 
     # ------------------------------------------------------------
     # To override
@@ -30,7 +34,9 @@ class WebFlowNodeMixin(models.AbstractModel):
 
     @api.model
     def _flow_node_types(self):
-        """Types of steps offered by the + buttons: [{'type', 'label', 'icon', 'help'}] (icon: Odoo UI icon)."""
+        """Types of steps offered by the + buttons: [{'type', 'label', 'icon', 'help', 'category', 'shape'}] (icon:
+        Odoo UI icon; the types of a category are grouped under its name in the menu, with the same color; shape
+        'pill': drawn as a small END pill instead of a card, for the steps that end a branch)."""
         return []
 
     def _flow_branch_list(self):
@@ -103,7 +109,7 @@ class WebFlowNodeMixin(models.AbstractModel):
 
     def write(self, vals):
         res = super().write(vals)
-        if not self.env.context.get('web_flow_moving'):
+        if not self.env.context.get('web_flow_moving') and set(vals) - {'flow_position', 'flow_end_positions'}:
             # the steps after must still match the branches (type or choices changed)
             self.search([('parent_id', 'in', self.ids)])._check_flow_tree()
         return res
@@ -116,7 +122,9 @@ class WebFlowNodeMixin(models.AbstractModel):
         self.ensure_one()
         labels = self._flow_branch_labels()
         optional = self._flow_optional_branches()
-        types = {t['type']: t for t in self._flow_node_types()}
+        node_types = self._flow_node_types()
+        categories = list(dict.fromkeys(t.get('category') or '' for t in node_types))
+        types = {t['type']: t for t in node_types}
         node_type = types.get(self[self._flow_type_field]) or {}
         return {
             'id': self.id,
@@ -124,12 +132,16 @@ class WebFlowNodeMixin(models.AbstractModel):
             'type': self[self._flow_type_field],
             'type_label': node_type.get('label', ''),
             'icon': node_type.get('icon', 'circle'),
+            'color': categories.index(node_type.get('category') or '') if node_type else 0,
             'parent_id': self.parent_id.id or False,
             'branch': self.flow_branch or False,
             'branch_label': self.flow_branch_label or False,
             'summary': '',
             'warning': False,
             'status': False,
+            'position': self.flow_position if isinstance(self.flow_position, dict) else False,
+            'end_positions': self.flow_end_positions if isinstance(self.flow_end_positions, dict) else {},
+            'shape': node_type.get('shape') or 'card',
             **self._flow_card_data(),
             'branches': [{
                 'key': f"{branch}|{label or ''}",
@@ -146,9 +158,28 @@ class WebFlowMixin(models.AbstractModel):
     _name = 'web.flow.mixin'
     _description = 'Flow (web_flow)'
 
+    flow_start_position = fields.Json("Position of the start card", copy=False)
+
     def _flow_start_label(self):
-        """Text of the start card, above the first step."""
+        """Title of the start card, before the first step."""
         return self.env._("Start")
+
+    def _flow_start_summary(self):
+        """Second line of the start card (e.g. what starts the flow)."""
+        return ''
+
+    def _flow_start_view(self):
+        """Form view of this record opened by a click on the start card, to set what starts the flow (False: the
+        start card cannot be opened)."""
+        return False
+
+    def web_flow_reset_layout(self, field_name):
+        """Forget the positions set by hand: the layout places every card again."""
+        self.ensure_one()
+        self.check_access('write')
+        self[field_name].write({'flow_position': False, 'flow_end_positions': False})
+        self.flow_start_position = False
+        return True
 
     def web_flow_data(self, field_name):
         """Steps of the one2many ``field_name`` for the canvas (no step for a new record, called on no record)."""
@@ -159,8 +190,12 @@ class WebFlowMixin(models.AbstractModel):
             raise UserError(self.env._("Field %s is not a flow.", field_name))
         Node = self.env[field.comodel_name]
         nodes = self[field_name].sorted(lambda n: (n.sequence, n.id) if 'sequence' in Node._fields else n.id)
+        start_view = self._flow_start_view() if self else False
         return {
             'start': self._flow_start_label(),
+            'start_summary': self._flow_start_summary() if self else '',
+            'start_view_id': start_view.id if start_view else False,
+            'start_position': self.flow_start_position if self and isinstance(self.flow_start_position, dict) else False,
             'types': Node._flow_node_types(),
             'container_field': Node._flow_container_field,
             'type_field': Node._flow_type_field,

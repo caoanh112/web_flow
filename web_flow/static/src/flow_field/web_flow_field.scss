@@ -1,5 +1,6 @@
 $o-web-flow-line: $o-gray-400;
-$o-web-flow-gap: 1.25rem;
+$o-web-flow-accent: $primary;
+$o-web-flow-colors: (0: $info, 1: $warning, 2: $success, 3: $primary, 4: $danger, 5: $o-gray-600);
 
 .o_field_widget:has(> .o_web_flow) {
     display: block;
@@ -8,82 +9,92 @@ $o-web-flow-gap: 1.25rem;
 
 .o_web_flow {
     position: relative;
-    border: 1px solid $border-color;
-    border-radius: $border-radius-lg;
-    background-color: $o-gray-100;
-    background-image: radial-gradient(circle, $o-gray-300 1px, transparent 1px);
-    background-size: 18px 18px;
-
-    .o_web_flow_toolbar {
-        position: absolute;
-        top: .5rem;
-        right: .5rem;
-        z-index: 3;
-    }
 
     .o_web_flow_canvas {
-        overflow: auto;
-        min-height: 24rem;
-        max-height: 75vh;
-        padding: 1.5rem 1rem 3rem;
+        position: relative;
+        overflow: hidden;
+        height: 32rem;
+        border: 1px solid $border-color;
+        border-radius: $border-radius-lg;
+        background-color: $o-gray-100;
+        background-image: radial-gradient(circle, $o-gray-300 1px, transparent 1px);
         cursor: grab;
+        touch-action: none;
+        user-select: none;
 
-        &.o_web_flow_dragging {
-            cursor: grabbing;
-            user-select: none;
+        &.o_web_flow_panning { cursor: grabbing; }
+    }
+
+    &.o_web_flow_fullscreen {
+        position: fixed;
+        inset: 0;
+        z-index: $zindex-modal-backdrop - 1;
+        background-color: $o-view-background-color;
+
+        .o_web_flow_canvas {
+            height: 100%;
+            border: 0;
+            border-radius: 0;
         }
     }
 
-    .o_web_flow_tree {
-        display: flex;
-        justify-content: center;
-        min-width: max-content;
+    .o_web_flow_world {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform-origin: 0 0;
     }
 
-    .o_web_flow_node {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    .o_web_flow_edges {
+        position: absolute;
+        top: 0;
+        left: 0;
+        overflow: visible;
+        pointer-events: none;
     }
 
-    // card of a step
+    .o_web_flow_edge {
+        fill: none;
+        stroke: $o-web-flow-line;
+        stroke-width: 2px;
+    }
+
+    .o_web_flow_edge_goto {
+        stroke-dasharray: 6 5;
+        stroke: $o-gray-500;
+    }
+
+    .o_web_flow_arrow { fill: $o-gray-500; }
+
+    // cards
     .o_web_flow_card {
-        position: relative;
+        position: absolute;
         display: flex;
         gap: .6rem;
-        align-items: flex-start;
-        width: 16rem;
-        padding: .6rem .75rem;
+        align-items: center;
+        padding: .5rem .6rem;
         border: 1px solid $border-color;
-        border-left: 4px solid $o-gray-500;
         border-radius: $border-radius-lg;
         background-color: $o-view-background-color;
         box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
         cursor: pointer;
         text-align: start;
 
-        &:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+        &:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, .12); }
+        &.o_web_flow_dragged {
+            z-index: 2;
+            cursor: grabbing;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
         }
-
-        &.o_web_flow_start {
-            width: auto;
-            min-width: 10rem;
-            border-left-color: $success;
-            cursor: default;
-        }
-
-        &.o_web_flow_warning {
-            border-color: $warning;
-            border-left-color: $warning;
-        }
+        &.o_web_flow_start { cursor: grab; }
+        &.o_web_flow_warning { border-color: $warning; }
 
         // run monitors
-        &.o_web_flow_status_done { border-left-color: $success; }
-        &.o_web_flow_status_running { border-left-color: $info; box-shadow: 0 0 0 .2rem rgba($info, .25); }
-        &.o_web_flow_status_waiting { border-left-color: $warning; box-shadow: 0 0 0 .2rem rgba($warning, .25); }
-        &.o_web_flow_status_failed { border-left-color: $danger; }
-        &.o_web_flow_status_skipped { opacity: .55; }
+        &.o_web_flow_status_done { border-color: $success; box-shadow: inset 4px 0 0 $success; }
+        &.o_web_flow_status_running { border-color: $info; box-shadow: 0 0 0 .25rem rgba($info, .25); }
+        &.o_web_flow_status_waiting { border-color: $warning; box-shadow: 0 0 0 .25rem rgba($warning, .3); }
+        &.o_web_flow_status_failed { border-color: $danger; box-shadow: inset 4px 0 0 $danger; }
+        &.o_web_flow_status_cancelled { opacity: .6; }
     }
 
     .o_web_flow_icon {
@@ -93,187 +104,171 @@ $o-web-flow-gap: 1.25rem;
         flex-shrink: 0;
         width: 2rem;
         height: 2rem;
-        border-radius: 50%;
+        border-radius: $border-radius;
         background-color: $o-gray-200;
         color: $o-gray-700;
+    }
+
+    .o_web_flow_start .o_web_flow_icon { background-color: rgba($success, .15); color: $success; }
+
+    // icons of the steps colored by category, like in the menu of the + buttons
+    @each $index, $color in $o-web-flow-colors {
+        .o_web_flow_color_#{$index} .o_web_flow_icon {
+            background-color: rgba($color, .12);
+            color: $color;
+        }
     }
 
     .o_web_flow_card_body {
         flex-grow: 1;
         min-width: 0;
+        line-height: 1.25;
+
+        > div {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
     }
 
     .o_web_flow_card_type {
-        font-size: .75rem;
+        font-size: .7rem;
         color: $text-muted;
         text-transform: uppercase;
         letter-spacing: .02em;
     }
 
-    .o_web_flow_card_name {
-        font-weight: 600;
-        overflow-wrap: anywhere;
-    }
-
-    .o_web_flow_card_summary {
-        font-size: .85rem;
-        color: $text-muted;
-        overflow-wrap: anywhere;
-    }
-
-    .o_web_flow_card_warning {
-        font-size: .8rem;
-        color: $warning;
-    }
+    .o_web_flow_card_name { font-weight: 600; }
+    .o_web_flow_card_summary { font-size: .8rem; color: $text-muted; }
+    .o_web_flow_card_warning { font-size: .8rem; color: $warning; }
 
     .o_web_flow_card_menu {
-        position: relative;
-
-        .o_web_flow_menu {
-            right: 0;
-            left: auto;
-            top: 100%;
-            z-index: 4;
-            max-height: 20rem;
-            overflow-y: auto;
-        }
+        align-self: flex-start;
     }
 
-    // branches: a vertical line under the card, then a horizontal line over the branches (org chart)
-    .o_web_flow_branches {
-        position: relative;
+    // END of a branch without step
+    .o_web_flow_end {
+        position: absolute;
         display: flex;
-        justify-content: center;
-        padding-top: $o-web-flow-gap;
-
-        &::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 50%;
-            height: $o-web-flow-gap;
-            border-left: 2px solid $o-web-flow-line;
-        }
-    }
-
-    .o_web_flow_branch {
-        position: relative;
-        display: flex;
-        flex-direction: column;
         align-items: center;
-        padding: $o-web-flow-gap .75rem 0;
+        justify-content: center;
+        border: 1px solid $border-color;
+        border-radius: $border-radius;
+        background-color: $o-gray-200;
+        color: $o-gray-600;
+        font-size: .65rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+    }
 
-        &::before, &::after {
-            content: "";
+    .o_web_flow_movable, .o_web_flow_pill { cursor: grab; }
+    .o_web_flow_end.o_web_flow_dragged { z-index: 2; cursor: grabbing; box-shadow: 0 4px 12px rgba(0, 0, 0, .2); }
+
+    // a step that ends a branch, drawn like the END of a branch
+    .o_web_flow_pill {
+        border-color: $o-gray-500;
+        background-color: $o-gray-300;
+        color: $o-gray-800;
+
+        .o_web_flow_pill_delete {
             position: absolute;
-            top: 0;
-            width: 50%;
-            height: $o-web-flow-gap;
-            border-top: 2px solid $o-web-flow-line;
+            top: -.55rem;
+            right: -.55rem;
+            display: none;
+            width: 1.1rem;
+            height: 1.1rem;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background-color: $o-gray-700;
+            color: $white;
+            font-size: .7rem;
+            line-height: 1.1rem;
         }
 
-        &::before { right: 50%; }
-        &::after { left: 50%; border-left: 2px solid $o-web-flow-line; }
-        &:first-child::before, &:last-child::after { border-top: 0; }
-        &:first-child::after { border-top-left-radius: .75rem; }
-        &:last-child::before { border-right: 2px solid $o-web-flow-line; border-top-right-radius: .75rem; }
-        &:last-child:first-child::before { border: 0; }
+        &:hover .o_web_flow_pill_delete { display: block; }
+        &.o_web_flow_status_done { border-color: $success; background-color: rgba($success, .2); }
     }
 
-    .o_web_flow_single {
-        padding-top: 0;
+    .o_web_flow_start.o_web_flow_openable { cursor: pointer; }
 
-        &::before { display: none; }
-
-        > .o_web_flow_branch {
-            padding-top: $o-web-flow-gap;
-
-            &::before { display: none; }
-            &::after { border-top: 0; border-radius: 0; left: 50%; }
-        }
-    }
-
+    // labels and + buttons on the connectors (centered on their point)
     .o_web_flow_branch_label {
-        position: relative;
-        z-index: 1;
-        margin-bottom: .25rem;
-        padding: .1rem .55rem;
+        position: absolute;
+        transform: translate(-50%, -50%);
+        padding: .05rem .5rem;
         border: 1px solid $border-color;
         border-radius: 1rem;
         background-color: $o-view-background-color;
-        font-size: .75rem;
+        font-size: .7rem;
         font-weight: 600;
         white-space: nowrap;
+        pointer-events: none;
     }
 
-    .o_web_flow_branch_yes > .o_web_flow_branch_label { color: $success; border-color: rgba($success, .5); }
-    .o_web_flow_branch_no > .o_web_flow_branch_label { color: $danger; border-color: rgba($danger, .5); }
-    .o_web_flow_branch_error > .o_web_flow_branch_label { color: $danger; }
-
-    // + buttons, on the line
-    .o_web_flow_add {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-
-        &::after {
-            content: "";
-            height: .75rem;
-            border-left: 2px solid $o-web-flow-line;
-        }
-
-        &:not(.o_web_flow_add_insert)::after { display: none; }
-    }
+    .o_web_flow_branch_yes { color: $success; border-color: rgba($success, .5); }
+    .o_web_flow_branch_no, .o_web_flow_branch_error { color: $danger; border-color: rgba($danger, .5); }
 
     .o_web_flow_add_btn {
+        position: absolute;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 1.75rem;
-        height: 1.75rem;
+        width: 1.5rem;
+        height: 1.5rem;
         padding: 0;
-        border: 2px solid $o-web-flow-line;
+        transform: translate(-50%, -50%);
+        border: 0;
         border-radius: 50%;
-        background-color: $o-view-background-color;
-        color: $o-gray-600;
+        background-color: $o-web-flow-accent;
+        color: $white;
+        font-size: .85rem;
+        box-shadow: 0 0 0 3px $o-gray-100;
 
-        &:hover, &:focus {
-            border-color: $primary;
-            color: $primary;
-        }
+        &:hover, &:focus { filter: brightness(1.15); }
     }
 
-    .o_web_flow_add_insert .o_web_flow_add_btn {
-        width: 1.4rem;
-        height: 1.4rem;
-        opacity: .6;
-
-        &:hover, &:focus { opacity: 1; }
-    }
-
-    .o_web_flow_picker {
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
+    // floating toolbar, bottom left like the canvas of a marketing automation
+    .o_web_flow_toolbar {
+        position: absolute;
+        bottom: .75rem;
+        left: .75rem;
         z-index: 4;
-        width: 18rem;
-        max-height: 24rem;
-        overflow-y: auto;
-    }
+        display: flex;
+        gap: .5rem;
 
-    .o_web_flow_picker_icon {
-        margin-top: .15rem;
+        .btn-group {
+            border-radius: $border-radius-lg;
+            background-color: $o-view-background-color;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
+        }
+
+        .o_web_flow_zoom { min-width: 4rem; }
     }
 
     .o_web_flow_hint {
-        margin-top: .5rem;
+        position: absolute;
+        top: .75rem;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+    }
+}
+
+// menu of the + buttons and of the cards (in the popover overlay, outside the canvas), like the step menu of a
+// marketing automation: entries grouped under their category, with the category color
+.o_web_flow_add_menu {
+    .o_web_flow_add_group .dropdown-item {
+        padding-left: calc(#{$o-dropdown-hpadding} + #{$spacer * .75});
     }
 
-    .o_web_flow_end_dot {
-        width: .6rem;
-        height: .6rem;
-        border-radius: 50%;
-        background-color: $o-web-flow-line;
+    .o_web_flow_add_group:not(:first-child) > .dropdown-header {
+        margin-top: $spacer * .25;
+    }
+
+    @each $index, $color in $o-web-flow-colors {
+        .o_web_flow_color_#{$index} .oi {
+            color: $color;
+        }
     }
 }
