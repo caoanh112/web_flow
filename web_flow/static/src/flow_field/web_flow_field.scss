@@ -76,7 +76,9 @@ $o-web-flow-colors: (0: $info, 1: $warning, 2: $success, 3: $primary, 4: $danger
         padding: .5rem .6rem;
         border: 1px solid $border-color;
         border-radius: $border-radius-lg;
-        background-color: $o-view-background-color;
+        // translucent like the canvas, blurred so the text stays readable
+        background-color: rgba($o-view-background-color, .72);
+        backdrop-filter: blur(8px);
         box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
         cursor: pointer;
         text-align: start;
@@ -155,7 +157,8 @@ $o-web-flow-colors: (0: $info, 1: $warning, 2: $success, 3: $primary, 4: $danger
         justify-content: center;
         border: 1px solid $border-color;
         border-radius: $border-radius;
-        background-color: $o-gray-200;
+        background-color: rgba($o-gray-200, .7);
+        backdrop-filter: blur(8px);
         color: $o-gray-600;
         font-size: .65rem;
         font-weight: 700;
@@ -168,7 +171,7 @@ $o-web-flow-colors: (0: $info, 1: $warning, 2: $success, 3: $primary, 4: $danger
     // a step that ends a branch, drawn like the END of a branch
     .o_web_flow_pill {
         border-color: $o-gray-500;
-        background-color: $o-gray-300;
+        background-color: rgba($o-gray-300, .7);
         color: $o-gray-800;
 
         .o_web_flow_pill_delete {
@@ -200,7 +203,8 @@ $o-web-flow-colors: (0: $info, 1: $warning, 2: $success, 3: $primary, 4: $danger
         padding: .05rem .5rem;
         border: 1px solid $border-color;
         border-radius: 1rem;
-        background-color: $o-view-background-color;
+        background-color: rgba($o-view-background-color, .8);
+        backdrop-filter: blur(8px);
         font-size: .7rem;
         font-weight: 600;
         white-space: nowrap;
@@ -240,7 +244,8 @@ $o-web-flow-colors: (0: $info, 1: $warning, 2: $success, 3: $primary, 4: $danger
 
         .btn-group {
             border-radius: $border-radius-lg;
-            background-color: $o-view-background-color;
+            background-color: rgba($o-view-background-color, .72);
+            backdrop-filter: blur(8px);
             box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
         }
 
