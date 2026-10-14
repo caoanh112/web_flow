@@ -16,7 +16,8 @@ $o-web-flow-colors: (0: $info, 1: $warning, 2: $success, 3: $primary, 4: $danger
         height: 32rem;
         border: 1px solid $border-color;
         border-radius: $border-radius-lg;
-        background-color: $o-gray-100;
+        // translucent so that themes with a glass background show through
+        background-color: rgba($o-gray-100, .5);
         background-image: radial-gradient(circle, $o-gray-300 1px, transparent 1px);
         cursor: grab;
         touch-action: none;
