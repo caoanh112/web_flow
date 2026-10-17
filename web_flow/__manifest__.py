@@ -25,7 +25,7 @@ marketing automation, for any model, on Odoo Community and Enterprise.
   two records. The records after a record by a link can be folded.
 """,
     'category': 'Extra Tools',
-    'version': '20.0.1.4.0',
+    'version': '20.0.1.4.1',
     'depends': ['web'],
     'assets': {
         'web.assets_backend': [

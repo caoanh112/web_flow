@@ -2,26 +2,26 @@
     <div class="container py-4">
         <div class="row">
             <div class="col-12">
-                <h2>Web Flow: a Canvas Widget for Flows of Steps</h2>
+                <h2>Web Flow: Flow View and Canvas Widget for Odoo</h2>
                 <p class="lead">
-                    <strong>Web Flow</strong> draws a tree of steps with branches on a canvas, like the campaigns of a
-                    marketing automation, for <strong>any model</strong> of your modules, on Odoo Community and
-                    Enterprise. Users add a step where it goes with the <strong>+</strong> buttons, edit it in place,
-                    move it, zoom and pan.
+                    <strong>Web Flow</strong> shows how your records follow each other. Its <strong>flow view</strong>
+                    draws the records of any model from left to right in lanes, with the links between them (blocked
+                    by, parent, next...), and its <strong>canvas widget</strong> draws and edits a tree of steps with
+                    branches, like the campaigns of a marketing automation. On Odoo Community and Enterprise.
                 </p>
                 <div class="row mt-4">
                     <div class="col-md-4 mb-3">
                         <div class="alert alert-success h-100 mb-0">
-                            <strong>Two mixins</strong><br/>
-                            <code>web.flow.mixin</code> for the flow, <code>web.flow.node.mixin</code> for its steps,
-                            with the tree rules built in.
+                            <strong>Flow view</strong><br/>
+                            A view type <code>flow</code>: the kanban cards of your records in lanes by stage (or any
+                            group by), joined by the connectors of their links.
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="alert alert-success h-100 mb-0">
-                            <strong>One widget</strong><br/>
-                            <code>widget="web_flow"</code> on the one2many of the steps: cards, curved connectors,
-                            branch labels, END of the branches.
+                            <strong>Canvas widget</strong><br/>
+                            <code>widget="web_flow"</code> on a one2many of steps: cards, curved connectors, branch
+                            labels, + buttons, zoom and pan.
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
@@ -41,9 +41,44 @@
     <div class="container py-4">
         <div class="row">
             <div class="col-12">
-                <h3>Screenshot</h3>
-                <p>The canvas as used by AI Workflow: steps of different types, Yes / No branches, + buttons.</p>
-                <img src="screenshots/flow_canvas.png" alt="Web Flow canvas widget with steps, branches and plus buttons" class="img-fluid border rounded shadow-sm"/>
+                <h3>Flow view</h3>
+                <p>The tasks of a project as a flow: lanes by stage, the tasks after the tasks that block them, the
+                    sub-tasks next to their task.</p>
+                <img src="screenshots/flow_view.png" alt="Flow view of the tasks of a project in lanes by stage" class="img-fluid border rounded shadow-sm mb-4"/>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <p><strong>Hover a task</strong>: what it waits for and what waits for it stand out.</p>
+                        <img src="screenshots/flow_view_hover.png" alt="Hover a card: the chains before and after it stand out" class="img-fluid border rounded shadow-sm"/>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p><strong>Hover a connector and click +</strong>: insert a record of a type between two records.</p>
+                        <img src="screenshots/flow_view_insert.png" alt="The + of a connector opens the menu of the types" class="img-fluid border rounded shadow-sm"/>
+                    </div>
+                </div>
+                <h4>Declare it in a view</h4>
+<pre class="bg-light border rounded p-3 small"><code>&lt;record id="project_task_view_flow" model="ir.ui.view"&gt;
+    &lt;field name="model"&gt;project.task&lt;/field&gt;
+    &lt;field name="arch" type="xml"&gt;
+        &lt;flow default_group_by="stage_id" type_field="flow_type_id" card_id="%(project.view_task_card)d"&gt;
+            &lt;link field="depend_on_ids" string="Blocked by"/&gt;
+            &lt;link field="parent_id" string="Sub-task" line="dashed" arrow="0" route="orthogonal"/&gt;
+        &lt;/flow&gt;
+    &lt;/field&gt;
+&lt;/record&gt;</code></pre>
+                <h4>Features</h4>
+                <ul>
+                    <li>Links on many2one or many2many fields to the model itself, listing the records before
+                        (default) or after (<code>direction="next"</code>); line solid, dashed or dotted, arrow, color,
+                        curved or orthogonal connectors; a legend to hide or show each link.</li>
+                    <li>A record is placed after the records before it, on their row or below; the connectors go from
+                        the right side of a card to the left side of the next one and never over a card.</li>
+                    <li>The cards are the cards of your kanban view (<code>card_id</code> or a card template), all of
+                        the same size.</li>
+                    <li>Lanes by the group by of the search, sub-lanes by a second group by, their names written
+                        vertically; fold a lane on a click; drag a card to another lane to change its values.</li>
+                    <li>A + on each connector inserts a record of a type (<code>type_field</code>, grouped by category,
+                        with icons) between the two records; the records after a record can be folded.</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -53,7 +88,10 @@
     <div class="container py-4">
         <div class="row">
             <div class="col-12">
-                <h3>Use it in your module</h3>
+                <h3>Canvas widget</h3>
+                <p>The canvas as used by AI Workflow: steps of different types, Yes / No branches, + buttons.</p>
+                <img src="screenshots/flow_canvas.png" alt="Web Flow canvas widget with steps, branches and plus buttons" class="img-fluid border rounded shadow-sm mb-4"/>
+                <h4>Use it in your module</h4>
                 <ol>
                     <li>The flow inherits <code>web.flow.mixin</code>; its steps inherit <code>web.flow.node.mixin</code>,
                         with a many2one to the flow (<code>_flow_container_field</code>, <code>flow_id</code> by default),
@@ -81,34 +119,13 @@
 
     def _flow_branch_list(self):
         return [('yes', False), ('no', False)] if self.node_type == 'check' else [('next', False)]</code></pre>
-                <h3>Features</h3>
+                <h4>Features</h4>
                 <ul>
                     <li>Insert a step above another, delete a step and its branch, re-layout.</li>
                     <li>Drag the cards anywhere: their position is kept.</li>
                     <li>Pan, zoom (Ctrl + wheel), fit to view, full screen; option <code>fill</code> to use the height left
                         in the page.</li>
                     <li>Loops are not drawn: a step type of your model can lead to another step (e.g. "Go to step").</li>
-                </ul>
-                <h3>Flow view</h3>
-                <p>A view type <code>flow</code> for any model: the records as the cards of a kanban view, from left to
-                    right in horizontal lanes by the group by (split in sub-lanes by a second group by), with the
-                    connectors of the links between them.</p>
-                <pre><code>&lt;flow default_group_by="stage_id" type_field="flow_type_id" card_id="..."&gt;
-    &lt;link field="depend_on_ids" string="Blocked by"/&gt;
-    &lt;link field="parent_id" string="Sub-task" line="dashed" arrow="0" route="orthogonal"/&gt;
-&lt;/flow&gt;</code></pre>
-                <ul>
-                    <li>Links on many2one or many2many fields to the model itself, listing the records before
-                        (default) or after (<code>direction="next"</code>); line solid, dashed or dotted, arrow, color,
-                        curved or orthogonal connectors.</li>
-                    <li>A record is placed after the records before it, on their row or below; the connectors go from
-                        the right side of a card to the left side of the next one and never over a card.</li>
-                    <li>Hover a card: the records before and after it and their connectors stand out. Click a link in
-                        the legend to hide or show it.</li>
-                    <li>Hover a connector and click its + to insert a record of a type (<code>type_field</code>, grouped
-                        by category, with icons) between the two records.</li>
-                    <li>Lanes and sub-lanes with their names written vertically, folded on a click; drag a card to
-                        another lane to change its values; the records after a record can be folded.</li>
                 </ul>
                 <h3>Technical details</h3>
                 <ul>
