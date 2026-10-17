@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="web_flow.FlowView.Buttons">
+        <div class="d-flex">
+            <button t-if="this.props.archInfo.activeActions.create" type="button" class="btn btn-primary o_flow_button_add"
+                    t-on-click="() => this.props.createRecord()">New</button>
+        </div>
+    </t>
+
+    <t t-name="web_flow.FlowView">
+        <div t-att-class="'o_flow_view ' + (this.props.className or '')" t-ref="this.rootRef">
+            <Layout className="'d-flex'" display="this.props.display">
+                <t t-set-slot="control-panel-additional-actions">
+                    <CogMenu/>
+                </t>
+                <t t-set-slot="control-panel-buttons">
+                    <t t-call="{{ this.props.buttonTemplate }}"/>
+                </t>
+                <t t-set-slot="control-panel-actions">
+                    <SearchBar toggler="this.searchBarToggler"/>
+                </t>
+                <t t-set-slot="control-panel-navigation-additional">
+                    <t t-component="this.searchBarToggler.component" t-props="this.searchBarToggler.props"/>
+                </t>
+                <t t-set-slot="default">
+                    <ActionHelper t-if="this.displayNoContent" noContentHelp="this.props.info.noContentHelp"/>
+                    <t t-else="" t-component="this.props.Renderer" root="this.model.root" lanes="this.model.lanes" types="this.model.types" collapsed="this.model.collapsed" archInfo="this.props.archInfo"
+                       Compiler="this.props.Compiler" readonly="this.props.readonly" openRecord.bind="this.openRecord" reload.bind="this.reload"/>
+                </t>
+            </Layout>
+        </div>
+    </t>
+
+    <t t-name="web_flow.FlowRenderer">
+        <t t-set="board" t-value="this.board"/>
+        <t t-set="related" t-value="this.related(board)"/>
+        <div class="o_web_flow o_web_flow_board_wrap">
+            <div class="o_web_flow_board" t-att-class="{ 'o_web_flow_dragging': this.state.dragging, 'o_web_flow_hovering': related }"
+                 t-on-pointerdown="this.onBoardPointerDown">
+                <div t-att-class="'o_web_flow_board_inner o_kanban_renderer ' + this.props.archInfo.className"
+                     t-attf-style="width: {{ board.width }}px;">
+                    <div class="o_web_flow_body" t-attf-style="height: {{ board.height }}px;">
+                        <t t-foreach="board.lanes" t-as="lane" t-key="lane.index">
+                            <!-- lane: name written vertically on the left (fold / unfold), line under it -->
+                            <div t-if="board.laneGroups" class="o_web_flow_lane_head" t-att-title="lane.label"
+                                 t-attf-style="top: {{ lane.y }}px; height: {{ lane.height }}px; width: {{ this.LANE_HEAD }}px;"
+                                 t-on-click="() => this.toggleLane(lane)">
+                                <i class="oi" t-att-data-icon="lane.folded ? 'chevron_right' : 'expand_more'"/>
+                                <span class="o_web_flow_count" t-out="lane.count"/>
+                                <span class="o_web_flow_lane_label fw-bold" t-out="lane.label"/>
+                            </div>
+                            <div t-if="board.laneGroups" class="o_web_flow_lane_separator" t-attf-style="top: {{ lane.y + lane.height }}px;"/>
+                            <t t-if="lane.folded">
+                                <t t-set="cell" t-value="{ key: lane.index + ':folded', lane: lane, sub: { empty: true, index: -1 } }"/>
+                                <div class="o_web_flow_drop_zone o_web_flow_lane_folded"
+                                     t-att-class="{ 'o_web_flow_drop': this.state.dropCell === cell.key }"
+                                     t-attf-style="left: {{ board.heads * this.LANE_HEAD }}px; top: {{ lane.y }}px; right: 0; height: {{ lane.height }}px;"
+                                     t-on-click="() => this.toggleLane(lane)"
+                                     t-on-dragover="(ev) => this.onDragOver(ev, cell)"
+                                     t-on-drop="(ev) => this.onDrop(ev, cell)"/>
+                            </t>
+                            <t t-else="">
+                                <t t-foreach="lane.subs" t-as="sub" t-key="sub.index">
+                                    <t t-set="cell" t-value="{ key: sub.cellKey, lane: lane, sub: sub }"/>
+                                    <t t-if="board.subGroups and !sub.empty">
+                                        <div class="o_web_flow_lane_head o_web_flow_sublane_head" t-att-title="sub.label"
+                                             t-attf-style="left: {{ board.laneGroups ? this.LANE_HEAD : 0 }}px; top: {{ sub.y }}px; height: {{ sub.height }}px; width: {{ this.LANE_HEAD }}px;">
+                                            <span class="o_web_flow_count" t-out="sub.ids.size"/>
+                                            <span class="o_web_flow_lane_label" t-out="sub.label"/>
+                                        </div>
+                                        <div t-if="!sub_last" class="o_web_flow_sublane_separator"
+                                             t-attf-style="left: {{ board.laneGroups ? this.LANE_HEAD : 0 }}px; top: {{ sub.y + sub.height }}px;"/>
+                                    </t>
+                                    <div class="o_web_flow_drop_zone"
+                                         t-att-class="{ 'o_web_flow_drop': this.state.dropCell === cell.key }"
+                                         t-attf-style="left: {{ board.heads * this.LANE_HEAD }}px; top: {{ sub.y }}px; right: 0; height: {{ sub.height }}px;"
+                                         t-on-dragover="(ev) => this.onDragOver(ev, cell)"
+                                         t-on-drop="(ev) => this.onDrop(ev, cell)"/>
+                                </t>
+                            </t>
+                        </t>
+
+                        <svg class="o_web_flow_edges" xmlns="http://www.w3.org/2000/svg"
+                             t-att-width="board.width" t-att-height="board.height">
+                            <defs>
+                                <marker id="o_web_flow_view_arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10"
+                                        markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+                                    <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+                                </marker>
+                            </defs>
+                            <!-- a connector, a wider invisible line to hover it, its + shown on hover -->
+                            <g t-foreach="board.edges" t-as="edge" t-key="edge.key" class="o_web_flow_edge_group"
+                               t-att-class="{ 'o_web_flow_edge_open': this.state.insert and this.state.insert.key === edge.key }">
+                                <path t-att-d="edge.path"
+                                      t-att-class="'o_web_flow_edge o_web_flow_line_' + edge.link.line + (related and related.edges.has(edge.key) ? ' o_web_flow_related' : '')"
+                                      t-att-style="edge.link.color ? 'stroke: ' + edge.link.color : false"
+                                      t-att-marker-end="edge.link.arrow ? 'url(#o_web_flow_view_arrow)' : false"/>
+                                <t t-if="this.canInsert">
+                                    <path t-att-d="edge.path" class="o_web_flow_edge_hit"/>
+                                    <g class="o_web_flow_plus" t-attf-transform="translate({{ edge.plus.x }} {{ edge.plus.y }})"
+                                       t-on-click="() => this.openInsertMenu(edge)">
+                                        <title t-out="'Insert a record here (' + edge.link.string + ')'"/>
+                                        <circle r="11"/>
+                                        <path d="M -5 0 H 5 M 0 -5 V 5"/>
+                                    </g>
+                                </t>
+                            </g>
+                        </svg>
+
+                        <div t-foreach="board.cards" t-as="card" t-key="card.key" class="o_web_flow_card_wrap"
+                             t-att-class="{ 'o_web_flow_related': related and related.cards.has(card.record.resId), 'o_web_flow_hovered': this.state.hover === card.record.resId }"
+                             t-on-mouseenter="() => this.onCardEnter(card)" t-on-mouseleave="() => this.onCardLeave()"
+                             t-att-draggable="this.canDrag ? 'true' : 'false'"
+                             t-attf-style="left: {{ card.x }}px; top: {{ card.y }}px; width: {{ this.CARD_W }}px; height: {{ this.CARD_H }}px;"
+                             t-on-dragstart="(ev) => this.onDragStart(ev, card)"
+                             t-on-dragend="() => this.onDragEnd()">
+                            <KanbanRecord archInfo="this.props.archInfo" Compiler="this.props.Compiler"
+                                          record="card.record" readonly="this.props.readonly"
+                                          canOpenRecords="true" openRecord="this.props.openRecord"
+                                          cardColorField="this.props.archInfo.cardColorField"/>
+                        </div>
+
+                        <div t-if="this.state.insert" class="dropdown-menu show o_web_flow_add_menu o_web_flow_insert_menu"
+                             t-attf-style="left: {{ this.state.insert.plus.x }}px; top: {{ this.state.insert.plus.y + 16 }}px;">
+                            <div t-foreach="this.typeGroups" t-as="group" t-key="group.label"
+                                 t-att-class="'o_web_flow_add_group o_web_flow_color_' + group.color">
+                                <div t-if="group.label" class="dropdown-header" t-out="group.label"/>
+                                <button t-foreach="group.types" t-as="type" t-key="type.id" type="button" class="dropdown-item"
+                                        t-att-title="type.help or ''" t-on-click="() => this.insertRecord(type)">
+                                    <i t-if="type.icon" class="oi pe-1" t-att-data-icon="type.icon"/><t t-out="type.name"/>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div t-if="this.props.archInfo.links.length > 1" class="o_web_flow_legend">
+                <span t-foreach="this.props.archInfo.links" t-as="link" t-key="link.index" class="o_web_flow_legend_item"
+                      t-att-class="{ 'o_web_flow_legend_off': this.state.hiddenLinks[link.index] }"
+                      t-att-title="this.state.hiddenLinks[link.index] ? 'Show these connectors' : 'Hide these connectors'"
+                      t-on-click="() => this.toggleLink(link)">
+                    <svg width="34" height="10" class="overflow-visible">
+                        <path d="M 0 5 L 30 5" t-att-class="'o_web_flow_edge o_web_flow_line_' + link.line"
+                              t-att-style="link.color ? 'stroke: ' + link.color : false"
+                              t-att-marker-end="link.arrow ? 'url(#o_web_flow_view_arrow)' : false"/>
+                    </svg>
+                    <t t-out="link.string"/>
+                </span>
+            </div>
+        </div>
+    </t>
+</templates>

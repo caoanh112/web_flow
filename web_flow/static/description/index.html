@@ -89,6 +89,27 @@
                         in the page.</li>
                     <li>Loops are not drawn: a step type of your model can lead to another step (e.g. "Go to step").</li>
                 </ul>
+                <h3>Flow view</h3>
+                <p>A view type <code>flow</code> for any model: the records as the cards of a kanban view, from left to
+                    right in horizontal lanes by the group by (split in sub-lanes by a second group by), with the
+                    connectors of the links between them.</p>
+                <pre><code>&lt;flow default_group_by="stage_id" type_field="flow_type_id" card_id="..."&gt;
+    &lt;link field="depend_on_ids" string="Blocked by"/&gt;
+    &lt;link field="parent_id" string="Sub-task" line="dashed" arrow="0" route="orthogonal"/&gt;
+&lt;/flow&gt;</code></pre>
+                <ul>
+                    <li>Links on many2one or many2many fields to the model itself, listing the records before
+                        (default) or after (<code>direction="next"</code>); line solid, dashed or dotted, arrow, color,
+                        curved or orthogonal connectors.</li>
+                    <li>A record is placed after the records before it, on their row or below; the connectors go from
+                        the right side of a card to the left side of the next one and never over a card.</li>
+                    <li>Hover a card: the records before and after it and their connectors stand out. Click a link in
+                        the legend to hide or show it.</li>
+                    <li>Hover a connector and click its + to insert a record of a type (<code>type_field</code>, grouped
+                        by category, with icons) between the two records.</li>
+                    <li>Lanes and sub-lanes with their names written vertically, folded on a click; drag a card to
+                        another lane to change its values; the records after a record can be folded.</li>
+                </ul>
                 <h3>Technical details</h3>
                 <ul>
                     <li>Odoo 20, Community and Enterprise. Depends on <code>web</code> only. LGPL-3, free.</li>

@@ -1,0 +1,203 @@
+// flow view: a board fixed in the page like a kanban view, horizontal lanes (first group by) split in sub-lanes
+// (second group by), the cards of the same size from left to right, the connectors of the links in the gaps (styles of the
+// connectors and + buttons: the web_flow widget, class o_web_flow)
+.o_flow_view .o_content {
+    display: flex;
+    overflow: hidden;
+}
+
+.o_web_flow.o_web_flow_board_wrap {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.o_web_flow_board {
+    flex: 1 1 auto;
+    overflow: auto;
+
+    .o_web_flow_board_inner {
+        // the kanban variables give the look of the cards; the board is not a flex row of groups
+        display: block;
+        min-width: 100%;
+        min-height: 100%;
+        border-top: 0;
+    }
+
+    .o_web_flow_count {
+        color: $text-muted;
+        font-size: $font-size-sm;
+    }
+
+    .o_web_flow_body { position: relative; }
+
+    // lanes and sub-lanes: the name written vertically in a band on the left (fold / unfold), a line between them
+    .o_web_flow_lane_head {
+        position: absolute;
+        left: 0;
+        z-index: 4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .4rem;
+        padding: .5rem 0;
+        overflow: hidden;
+        border-right: 1px solid $border-color;
+        background-color: $o-webclient-background-color;
+        cursor: pointer;
+        user-select: none;
+
+        &:hover { background-color: rgba($o-gray-300, .5); }
+    }
+
+    .o_web_flow_lane_label {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .o_web_flow_lane_separator {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 4;
+        border-top: 1px solid $o-gray-400;
+    }
+
+    .o_web_flow_sublane_head {
+        z-index: 3;
+        background-color: rgba($o-gray-200, .5);
+        cursor: default;
+
+        &:hover { background-color: rgba($o-gray-200, .5); }
+    }
+
+    .o_web_flow_sublane_separator {
+        position: absolute;
+        right: 0;
+        z-index: 3;
+        border-top: 1px dashed $o-gray-300;
+    }
+
+    .o_web_flow_lane_folded { cursor: pointer; }
+
+    // cells, as drop targets above the cards while a card is moved
+    .o_web_flow_drop_zone {
+        position: absolute;
+        z-index: 1;
+
+        &.o_web_flow_drop {
+            outline: 2px dashed var(--KanbanColumn__highlight-border);
+            outline-offset: 4px;
+            border-radius: $border-radius-lg;
+            background-color: var(--KanbanColumn__highlight-background);
+        }
+    }
+
+    &.o_web_flow_dragging .o_web_flow_drop_zone { z-index: 5; }
+
+    .o_web_flow_edges {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 2;
+        overflow: visible;
+        pointer-events: none;
+    }
+
+    .o_web_flow_card_wrap {
+        position: absolute;
+        z-index: 3;
+
+        .o_kanban_record {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            border: 1px solid $border-color;
+            border-radius: $border-radius-lg;
+        }
+
+        &[draggable="true"] { cursor: grab; }
+    }
+
+    // + of a connector: shown on hover of the connector (or while its menu is open)
+    .o_web_flow_edge_hit {
+        fill: none;
+        stroke: transparent;
+        stroke-width: 16px;
+        pointer-events: stroke;
+    }
+
+    .o_web_flow_plus {
+        opacity: 0;
+        cursor: pointer;
+        pointer-events: all;
+        transition: opacity .15s;
+
+        circle { fill: $primary; stroke: $o-webclient-background-color; stroke-width: 3px; }
+        path { stroke: $white; stroke-width: 2px; stroke-linecap: round; }
+        &:hover circle { filter: brightness(1.15); }
+    }
+
+    .o_web_flow_edge_group:hover, .o_web_flow_edge_open {
+        .o_web_flow_plus { opacity: 1; }
+        .o_web_flow_edge { stroke: $o-gray-600; }
+    }
+
+    &.o_web_flow_dragging .o_web_flow_edge_group * { pointer-events: none; }
+
+    // hover on a card: its chains of records before and after it stand out, the rest fades
+    .o_web_flow_card_wrap, .o_web_flow_edge { transition: opacity .15s; }
+    &.o_web_flow_hovering {
+        .o_web_flow_card_wrap:not(.o_web_flow_related) { opacity: .35; }
+        .o_web_flow_edge:not(.o_web_flow_related) { opacity: .15; }
+        .o_web_flow_edge.o_web_flow_related { stroke: $primary; stroke-width: 2.5px; }
+        .o_web_flow_hovered .o_kanban_record { box-shadow: 0 0 0 2px $primary; }
+        .o_web_flow_related:not(.o_web_flow_hovered) .o_kanban_record { box-shadow: 0 0 0 1px rgba($primary, .6); }
+    }
+
+    .o_web_flow_insert_menu {
+        position: absolute;
+        z-index: 7;
+        max-height: 24rem;
+        overflow-y: auto;
+    }
+}
+
+// lines of the links (<link line="...">); the plain one is the connector of the web_flow widget
+.o_web_flow {
+    .o_web_flow_line_dashed { stroke-dasharray: 6 5; }
+    .o_web_flow_line_dotted { stroke-dasharray: 1 4; stroke-linecap: round; }
+}
+
+.o_web_flow_legend {
+    position: absolute;
+    right: 1rem;
+    bottom: .75rem;
+    z-index: 6;
+    display: flex;
+    gap: 1rem;
+    padding: .3rem .75rem;
+    border-radius: $border-radius-lg;
+    background-color: rgba($o-view-background-color, .85);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
+    font-size: $font-size-sm;
+
+    // a click hides / shows the connectors of the link
+    .o_web_flow_legend_item {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        cursor: pointer;
+        user-select: none;
+
+        &:hover { color: $primary; }
+        &.o_web_flow_legend_off {
+            opacity: .45;
+            text-decoration: line-through;
+        }
+    }
+}
